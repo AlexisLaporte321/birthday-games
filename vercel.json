@@ -1,14 +1,4 @@
 {
   "cleanUrls": true,
-  "trailingSlash": false,
-  "routes": [
-    {
-      "src": "/maxime",
-      "dest": "/maxime/index.html"
-    },
-    {
-      "src": "/maxime/(.*)",
-      "dest": "/maxime/$1"
-    }
-  ]
+  "trailingSlash": false
 }
