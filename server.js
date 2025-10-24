@@ -3,8 +3,8 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Servir les fichiers statiques avec les bons MIME types
-app.use(express.static(__dirname, {
+// Servir les fichiers statiques depuis public/
+app.use(express.static(path.join(__dirname, 'public'), {
     setHeaders: (res, filePath) => {
         if (filePath.endsWith('.css')) {
             res.setHeader('Content-Type', 'text/css');
@@ -18,12 +18,12 @@ app.use(express.static(__dirname, {
 
 // Route pour la page d'accueil
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Route pour le jeu de Maxime
 app.get('/maxime', (req, res) => {
-    res.sendFile(path.join(__dirname, 'maxime', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'maxime', 'index.html'));
 });
 
 app.listen(PORT, () => {

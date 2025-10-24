@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeux d'anniversaire - Équipe 321</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+        .games {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 15px;
+        }
+        .game-link {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-decoration: none;
+            border-radius: 10px;
+            display: block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .game-link:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .game-link.disabled {
+            background: linear-gradient(135deg, #ccc 0%, #999 100%);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .game-link.disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎂 Jeux d'anniversaire 🎉</h1>
+        <p class="subtitle">Équipe 321 Studio</p>
+        <div class="games">
+            <a href="/alexis" class="game-link disabled">🎮 Alexis</a>
+            <a href="/camille" class="game-link disabled">🎮 Camille</a>
+            <a href="/edouard" class="game-link disabled">🎮 Edouard</a>
+            <a href="/jeremy" class="game-link disabled">🎮 Jeremy</a>
+            <a href="/katerina" class="game-link disabled">🎮 Katerina</a>
+            <a href="/konstantinos" class="game-link disabled">🎮 Konstantinos</a>
+            <a href="/lea" class="game-link disabled">🎮 Léa</a>
+            <a href="/lebnan" class="game-link disabled">🎮 Lebnan</a>
+            <a href="/maxime" class="game-link">🎮 Maxime</a>
+            <a href="/myriam" class="game-link disabled">🎮 Myriam</a>
+            <a href="/patrick" class="game-link disabled">🎮 Patrick</a>
+            <a href="/romain" class="game-link disabled">🎮 Romain</a>
+        </div>
+    </div>
+</body>
+</html>
