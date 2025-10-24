@@ -1,8 +1,23 @@
-// Canvas configuration
+// Canvas configuration with fixed game area for consistency
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+
+// Fixed game dimensions (1920x1080 reference)
+const GAME_WIDTH = 1920;
+const GAME_HEIGHT = 1080;
+
+// Calculate scale to fit screen while maintaining aspect ratio
+const scaleX = window.innerWidth / GAME_WIDTH;
+const scaleY = window.innerHeight / GAME_HEIGHT;
+const scale = Math.min(scaleX, scaleY);
+
+// Set canvas to window size for display
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
+
+// Calculate offset to center game area
+const offsetX = (canvas.width - GAME_WIDTH * scale) / 2;
+const offsetY = (canvas.height - GAME_HEIGHT * scale) / 2;
 
 // Game variables
 let gameState = 'START'; // START, PLAYING, GAME_OVER, CREDITS
@@ -23,17 +38,17 @@ fetch('/api/highscore')
     })
     .catch(err => console.error('Failed to fetch leaderboard:', err));
 
-// Character (Maxime + his dog)
+// Character (Maxime + his dog) - using game coordinates
 const player = {
     x: 100,
-    y: canvas.height - 170,
-    width: 100,
-    height: 120,
+    y: GAME_HEIGHT - 170,
+    width: 78,  // Actual width of Maxime (36px) + gap + dog (32.5px)
+    height: 117,  // Full height of Maxime sprite (39 rows * 3 scale)
     velocityY: 0,
     jumping: false,
-    groundY: canvas.height - 170,
+    groundY: GAME_HEIGHT - 170,
     jumpCount: 0,
-    maxJumps: 2
+    maxJumps: 3  // Triple jump!
 };
 
 // Obstacles
@@ -44,8 +59,24 @@ let obstacleTimer = 0;
 const obstacleInterval = 120;
 let comboTimer = 0;
 
-// Ground
-const groundY = canvas.height - 80;
+// Collectibles (birthday items)
+const collectibles = [];
+let collectibleTimer = 0;
+
+
+// Obstacle patterns
+let patternTimer = 0;
+let currentPattern = null;
+let lastPatternType = null;
+
+// Background animated elements
+const pigeons = [];
+const pedestrians = [];
+let pigeonSpawnTimer = 0;
+let pedestrianSpawnTimer = 0;
+
+// Ground - using game coordinates
+const groundY = GAME_HEIGHT - 80;
 
 // Sprites pixel art
 function drawPixelArt(x, y, pixels, scale = 2) {
@@ -190,6 +221,13 @@ function drawPlayer() {
 
     drawPixelArt(player.x, player.y - 10, maxime, 3);
     drawPixelArt(player.x + 45, player.y + 55, chien, 2.5);
+
+    // Debug hitbox in localhost (starts at player.y - 10 to include hat)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';  // Blue for player
+        ctx.lineWidth = 2;
+        ctx.strokeRect(player.x, player.y - 10, player.width, player.height);
+    }
 }
 
 // Themed obstacle sprites
@@ -286,10 +324,112 @@ const obstacleSprites = {
     }
 };
 
+// Collectible sprites (birthday theme)
+const collectibleSprites = {
+    balloon: {
+        // Birthday balloon
+        pixels: [
+            [0, 0, '#ff69b4', '#ff69b4', '#ff69b4', 0, 0],
+            [0, '#ff69b4', '#ff1493', '#ff1493', '#ff1493', '#ff69b4', 0],
+            ['#ff69b4', '#ff1493', '#ff1493', '#ff1493', '#ff1493', '#ff1493', '#ff69b4'],
+            ['#ff69b4', '#ff1493', '#ff1493', '#ff1493', '#ff1493', '#ff1493', '#ff69b4'],
+            ['#ff69b4', '#ff1493', '#ff1493', '#ff1493', '#ff1493', '#ff1493', '#ff69b4'],
+            [0, '#ff69b4', '#ff1493', '#ff1493', '#ff1493', '#ff69b4', 0],
+            [0, 0, '#ff69b4', '#ff69b4', '#ff69b4', 0, 0],
+            [0, 0, 0, '#333', 0, 0, 0],
+            [0, 0, 0, '#333', 0, 0, 0],
+            [0, 0, 0, '#333', 0, 0, 0]
+        ],
+        scale: 3
+    },
+    cake: {
+        // Birthday cake slice
+        pixels: [
+            [0, 0, 0, '#ff6347', 0, 0, 0],
+            [0, 0, '#ff6347', '#ffd700', '#ff6347', 0, 0],
+            [0, '#ffb6c1', '#ffb6c1', '#ffb6c1', '#ffb6c1', '#ffb6c1', 0],
+            [0, '#fff', '#ffb6c1', '#ffb6c1', '#ffb6c1', '#fff', 0],
+            ['#f4a460', '#fff', '#ffb6c1', '#ffb6c1', '#ffb6c1', '#fff', '#f4a460'],
+            ['#f4a460', '#f4a460', '#f4a460', '#f4a460', '#f4a460', '#f4a460', '#f4a460'],
+            ['#daa520', '#daa520', '#daa520', '#daa520', '#daa520', '#daa520', '#daa520']
+        ],
+        scale: 3.5
+    },
+    gift: {
+        // Gift box
+        pixels: [
+            [0, 0, '#ffd700', '#ffd700', '#ffd700', 0, 0],
+            [0, 0, '#ffd700', '#ffd700', '#ffd700', 0, 0],
+            ['#ff4500', '#ff4500', '#ff4500', '#ff4500', '#ff4500', '#ff4500', '#ff4500'],
+            ['#ff4500', '#ffa500', '#ffa500', '#ffa500', '#ffa500', '#ffa500', '#ff4500'],
+            ['#ff4500', '#ffa500', '#ff4500', '#ff4500', '#ff4500', '#ffa500', '#ff4500'],
+            ['#ff4500', '#ffa500', '#ffa500', '#ffa500', '#ffa500', '#ffa500', '#ff4500'],
+            ['#ff4500', '#ff4500', '#ff4500', '#ff4500', '#ff4500', '#ff4500', '#ff4500']
+        ],
+        scale: 3.5
+    }
+};
+
 // Draw an obstacle
 function drawObstacle(obstacle) {
     const sprite = obstacleSprites[obstacle.type];
     drawPixelArt(obstacle.x, obstacle.y, sprite.pixels, sprite.scale);
+
+    // Debug hitbox in localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+    }
+}
+
+// Draw a collectible with animations
+function drawCollectible(collectible) {
+    const sprite = collectibleSprites[collectible.type];
+
+
+    // Pulse animation - scale oscillation
+    const pulseScale = 0.95 + Math.sin(animationFrame * 0.1) * 0.1;
+    const animatedScale = sprite.scale * pulseScale;
+
+    // Different animations per type
+    let offsetX = 0;
+    let offsetY = 0;
+
+    if (collectible.type === 'balloon') {
+        // Floating motion for balloon
+        offsetY = Math.sin(animationFrame * 0.08) * 3;
+        // Slight rotation would need canvas rotation, skip for simplicity
+    } else if (collectible.type === 'cake') {
+        // Gentle bounce
+        offsetY = Math.abs(Math.sin(animationFrame * 0.12)) * 2;
+    } else if (collectible.type === 'gift') {
+        // Subtle wiggle
+        offsetX = Math.sin(animationFrame * 0.15) * 1.5;
+    }
+
+    // Draw sparkles around collectibles (more visible)
+    const sparkleCount = 4;
+    const sparkleRadius = 20;
+    for (let i = 0; i < sparkleCount; i++) {
+        const angle = (animationFrame * 0.05 + (i * Math.PI * 2 / sparkleCount));
+        const sparkleX = collectible.x + collectible.width / 2 + Math.cos(angle) * sparkleRadius;
+        const sparkleY = collectible.y + collectible.height / 2 + Math.sin(angle) * sparkleRadius;
+        const sparkleAlpha = 0.5 + Math.sin(animationFrame * 0.1 + i) * 0.4;
+
+        // Larger, brighter sparkles
+        ctx.fillStyle = `rgba(255, 215, 0, ${sparkleAlpha})`;
+        ctx.fillRect(sparkleX - 1.5, sparkleY - 1.5, 3, 3);
+    }
+
+    drawPixelArt(collectible.x + offsetX, collectible.y + offsetY, sprite.pixels, animatedScale);
+
+    // Debug hitbox in localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(collectible.x, collectible.y, collectible.width, collectible.height);
+    }
 }
 
 // Credits
@@ -334,11 +474,11 @@ const credits = [
 // Ground and decor
 function drawGround() {
     ctx.fillStyle = '#8b7355';
-    ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+    ctx.fillRect(0, groundY, GAME_WIDTH, GAME_HEIGHT - groundY);
 
     // Grass
     ctx.fillStyle = '#95d5b2';
-    for (let i = 0; i < canvas.width; i += 20) {
+    for (let i = 0; i < GAME_WIDTH; i += 20) {
         ctx.fillRect(i + (score % 20), groundY - 5, 10, 5);
     }
 }
@@ -365,6 +505,69 @@ function updatePlayer() {
     }
 }
 
+// Create obstacle pattern (wave, tunnel, staircase)
+function createPattern(patternType) {
+    if (patternType === 'wave') {
+        // 3 obstacles at different heights (low, medium, high)
+        const types = ['laptop', 'coffee', 'postit'];
+        types.forEach((type, index) => {
+            const sprite = obstacleSprites[type];
+            let yPos;
+            if (index === 0) yPos = groundY - sprite.pixels.length * sprite.scale; // Low
+            else if (index === 1) yPos = groundY - 120; // Medium
+            else yPos = groundY - 180; // High
+
+            obstacles.push({
+                x: GAME_WIDTH + index * 70,
+                y: yPos,
+                width: sprite.pixels[0].length * sprite.scale,
+                height: sprite.pixels.length * sprite.scale,
+                type: type
+            });
+        });
+    } else if (patternType === 'tunnel') {
+        // High and low obstacles - adjusted gap for passability
+        const topType = 'postit';
+        const bottomType = 'laptop';
+
+        const topSprite = obstacleSprites[topType];
+        // Lower the top obstacle to create bigger gap
+        obstacles.push({
+            x: GAME_WIDTH,
+            y: groundY - 160,  // Was -200, now -160 for larger gap
+            width: topSprite.pixels[0].length * topSprite.scale,
+            height: topSprite.pixels.length * topSprite.scale,
+            type: topType
+        });
+
+        const bottomSprite = obstacleSprites[bottomType];
+        obstacles.push({
+            x: GAME_WIDTH,
+            y: groundY - bottomSprite.pixels.length * bottomSprite.scale,
+            width: bottomSprite.pixels[0].length * bottomSprite.scale,
+            height: bottomSprite.pixels.length * bottomSprite.scale,
+            type: bottomType
+        });
+    } else if (patternType === 'staircase') {
+        // Ascending/descending stairs pattern - with better spacing
+        const types = ['coffee', 'meeting', 'costume'];
+        const ascending = Math.random() > 0.5;
+        types.forEach((type, index) => {
+            const sprite = obstacleSprites[type];
+            const heightMultiplier = ascending ? index : (types.length - 1 - index);
+            const yPos = groundY - sprite.pixels.length * sprite.scale - (heightMultiplier * 35);
+
+            obstacles.push({
+                x: GAME_WIDTH + index * 70,  // Was 50, now 70 for more spacing
+                y: yPos,
+                width: sprite.pixels[0].length * sprite.scale,
+                height: sprite.pixels.length * sprite.scale,
+                type: type
+            });
+        });
+    }
+}
+
 // Create obstacles
 function createObstacle() {
     const types = ['costume', 'laptop', 'meeting', 'coffee', 'postit'];
@@ -384,12 +587,59 @@ function createObstacle() {
     }
 
     obstacles.push({
-        x: canvas.width,
+        x: GAME_WIDTH,
         y: yPos,
         width: sprite.pixels[0].length * sprite.scale,
         height: sprite.pixels.length * sprite.scale,
         type: type
     });
+}
+
+// Create collectible (birthday items)
+function createCollectible() {
+    const types = ['balloon', 'cake', 'gift'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const sprite = collectibleSprites[type];
+
+    // Complex patterns - different heights for challenge
+    let yPos;
+    const heightPattern = Math.random();
+
+    if (type === 'balloon') {
+        // Balloons always high - requires double jump
+        yPos = groundY - 220 - Math.random() * 30;
+    } else if (heightPattern < 0.3) {
+        // Low placement (1 jump)
+        yPos = groundY - 100 - Math.random() * 20;
+    } else if (heightPattern < 0.6) {
+        // Medium placement (1-2 jumps depending on timing)
+        yPos = groundY - 150 - Math.random() * 30;
+    } else {
+        // High placement (double jump)
+        yPos = groundY - 200 - Math.random() * 30;
+    }
+
+    // Calculate correct dimensions for each type
+    let width, height;
+    if (type === 'balloon') {
+        width = 7 * 3;   // 7 pixels wide * scale 3
+        height = 10 * 3;  // 10 pixels tall * scale 3
+    } else if (type === 'cake') {
+        width = 7 * 3.5;  // 7 pixels wide * scale 3.5
+        height = 7 * 3.5; // 7 pixels tall * scale 3.5
+    } else if (type === 'gift') {
+        width = 7 * 3.5;  // 7 pixels wide * scale 3.5
+        height = 7 * 3.5; // 7 pixels tall * scale 3.5
+    }
+
+    collectibles.push({
+        x: GAME_WIDTH,
+        y: yPos,
+        width: width,
+        height: height,
+        type: type
+    });
+
 }
 
 // Update obstacles
@@ -400,11 +650,26 @@ function updateObstacles() {
     const currentInterval = 80 + Math.random() * 70;
 
     if (obstacleTimer > currentInterval) {
-        createObstacle();
+        // Decide whether to use a pattern or single obstacle
+        const rand = Math.random();
 
-        // Sometimes create a combo (2 close obstacles)
-        if (Math.random() < 0.2) {
-            comboTimer = 30; // Create an obstacle in 30 frames
+        if (rand < 0.5) {
+            // 50% single obstacle (standard)
+            createObstacle();
+        } else if (rand < 0.85) {
+            // 35% wave or staircase (more fun, less hard)
+            const patternType = Math.random() < 0.5 ? 'wave' : 'staircase';
+            lastPatternType = patternType;
+            createPattern(patternType);
+        } else {
+            // 15% tunnel (challenging)
+            lastPatternType = 'tunnel';
+            createPattern('tunnel');
+        }
+
+        // 80% chance to create a collectible after an obstacle (increased visibility)
+        if (Math.random() < 0.8) {
+            collectibleTimer = 15 + Math.random() * 25; // Create collectible in 15-40 frames
         }
 
         obstacleTimer = 0;
@@ -415,6 +680,14 @@ function updateObstacles() {
         comboTimer--;
         if (comboTimer === 0) {
             createObstacle();
+        }
+    }
+
+    // Collectible timer
+    if (collectibleTimer > 0) {
+        collectibleTimer--;
+        if (collectibleTimer === 0) {
+            createCollectible();
         }
     }
 
@@ -433,35 +706,68 @@ function updateObstacles() {
     });
 }
 
+// Update collectibles
+function updateCollectibles() {
+    collectibles.forEach((collectible, index) => {
+        collectible.x -= gameSpeed;
+
+        // Remove if off screen (no score increase)
+        if (collectible.x + collectible.width < 0) {
+            collectibles.splice(index, 1);
+        }
+    });
+}
+
 // Collision detection
 function checkCollision() {
     return obstacles.some(obstacle => {
         // Reduced tolerance margin for better collisions
         const marginX = 10;
         const marginY = 15;
+        const playerTop = player.y - 10;  // Hitbox starts at hat
 
         return player.x + marginX < obstacle.x + obstacle.width &&
                player.x + player.width - marginX > obstacle.x &&
-               player.y + marginY < obstacle.y + obstacle.height &&
-               player.y + player.height - marginY > obstacle.y;
+               playerTop + marginY < obstacle.y + obstacle.height &&
+               playerTop + player.height - marginY > obstacle.y;
+    });
+}
+
+// Collectible collection detection
+function checkCollectibleCollection() {
+    collectibles.forEach((collectible, index) => {
+        // More permissive collision for collectibles
+        const marginX = 5;
+        const marginY = 5;
+        const playerTop = player.y - 10;  // Hitbox starts at hat
+
+        if (player.x + marginX < collectible.x + collectible.width &&
+            player.x + player.width - marginX > collectible.x &&
+            playerTop + marginY < collectible.y + collectible.height &&
+            playerTop + player.height - marginY > collectible.y) {
+
+            // Collect the item
+            collectibles.splice(index, 1);
+            score += 5; // +5 bonus to score
+        }
     });
 }
 
 // Start screen
 function drawStartScreen() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 48px "Courier New"';
     ctx.textAlign = 'center';
-    ctx.fillText('🎉 HAPPY BIRTHDAY MAXIME! 🎂', canvas.width / 2, canvas.height / 2 - 80);
+    ctx.fillText('🎉 HAPPY BIRTHDAY MAXIME! 🎂', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80);
 
     ctx.font = '24px "Courier New"';
-    ctx.fillText('Help Maxime and his dog avoid obstacles in Paris!', canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText('Help Maxime and his dog avoid obstacles in Paris!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
 
     ctx.font = '20px "Courier New"';
-    ctx.fillText('Press SPACE to jump (double jump enabled!)', canvas.width / 2, canvas.height / 2 + 40);
+    ctx.fillText('Tap to jump (double jump enabled!)', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 40);
 
     if (leaderboard.length > 0) {
         ctx.fillStyle = '#ffd700';
@@ -470,12 +776,12 @@ function drawStartScreen() {
         const recordText = topScore.name ?
             `🌍 World Record: ${topScore.score} (${topScore.name})` :
             `🌍 World Record: ${topScore.score}`;
-        ctx.fillText(recordText, canvas.width / 2, canvas.height / 2 + 90);
+        ctx.fillText(recordText, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 90);
     }
 
     ctx.fillStyle = '#fff';
     ctx.font = '18px "Courier New"';
-    ctx.fillText('Press SPACE or click to start', canvas.width / 2, canvas.height / 2 + 130);
+    ctx.fillText('Tap to start', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 130);
 }
 
 // Show custom name input modal
@@ -568,21 +874,21 @@ function drawGameOver() {
     }
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 48px "Courier New"';
     ctx.textAlign = 'center';
-    ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2 - 80);
+    ctx.fillText('GAME OVER!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 80);
 
     ctx.font = '32px "Courier New"';
-    ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 - 10);
+    ctx.fillText(`Score: ${score}`, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 10);
 
     // Show new world record or current world record
     if (score >= topScore && score > 0) {
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 28px "Courier New"';
-        ctx.fillText('🌍 NEW WORLD RECORD! 🌍', canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText('🌍 NEW WORLD RECORD! 🌍', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
     } else if (topScore > 0) {
         ctx.fillStyle = '#fff';
         ctx.font = '24px "Courier New"';
@@ -590,34 +896,34 @@ function drawGameOver() {
         const recordText = topEntry.name ?
             `World Record: ${topEntry.score} (${topEntry.name})` :
             `World Record: ${topEntry.score}`;
-        ctx.fillText(recordText, canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText(recordText, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 30);
     }
 
     ctx.fillStyle = '#fff';
     ctx.font = '20px "Courier New"';
-    ctx.fillText('Credits in a few seconds...', canvas.width / 2, canvas.height / 2 + 80);
+    ctx.fillText('Credits in a few seconds...', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 80);
 
     ctx.font = '16px "Courier New"';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillText('(R to replay now / SPACE for double jump!)', canvas.width / 2, canvas.height / 2 + 110);
+    ctx.fillText('(Click/Tap to replay or press R)', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 110);
 }
 
 // End credits
 function drawCredits() {
     // Black background
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     ctx.textAlign = 'center';
 
-    let yPos = canvas.height - creditsOffset;
+    let yPos = GAME_HEIGHT - creditsOffset;
     const spacing = 300;
 
     credits.forEach((credit, index) => {
         const y = yPos + (index * spacing);
 
         // Only draw if visible on screen
-        if (y > -200 && y < canvas.height + 200) {
+        if (y > -200 && y < GAME_HEIGHT + 200) {
             // Draw the sprite
             if (credit.sprite === 'player') {
                 const maxime = [
@@ -637,25 +943,25 @@ function drawCredits() {
                     [0, '#8b4513', '#8b4513', '#8b4513', 0],
                     [0, '#654321', 0, '#654321', 0]
                 ];
-                drawPixelArt(canvas.width / 2 - 60, y - 100, maxime, 8);
-                drawPixelArt(canvas.width / 2 + 20, y - 50, chien, 8);
+                drawPixelArt(GAME_WIDTH / 2 - 60, y - 100, maxime, 8);
+                drawPixelArt(GAME_WIDTH / 2 + 20, y - 50, chien, 8);
             } else if (credit.sprite) {
                 const sprite = obstacleSprites[credit.sprite];
                 const spriteWidth = sprite.pixels[0].length * sprite.scale;
-                drawPixelArt(canvas.width / 2 - spriteWidth / 2, y - 80, sprite.pixels, sprite.scale);
+                drawPixelArt(GAME_WIDTH / 2 - spriteWidth / 2, y - 80, sprite.pixels, sprite.scale);
             }
 
             // Title
             ctx.fillStyle = '#ffd60a';
             ctx.font = 'bold 36px "Courier New"';
-            ctx.fillText(credit.title, canvas.width / 2, y + 50);
+            ctx.fillText(credit.title, GAME_WIDTH / 2, y + 50);
 
             // Description
             ctx.fillStyle = '#fff';
             ctx.font = '20px "Courier New"';
             const lines = credit.description.split('\n');
             lines.forEach((line, lineIndex) => {
-                ctx.fillText(line, canvas.width / 2, y + 90 + (lineIndex * 30));
+                ctx.fillText(line, GAME_WIDTH / 2, y + 90 + (lineIndex * 30));
             });
         }
     });
@@ -663,17 +969,17 @@ function drawCredits() {
     // Skip/replay indication
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.font = '16px "Courier New"';
-    if (creditsOffset < (credits.length * spacing) + canvas.height) {
-        ctx.fillText('SPACE to skip - R to replay', canvas.width / 2, canvas.height - 20);
+    if (creditsOffset < (credits.length * spacing) + GAME_HEIGHT) {
+        ctx.fillText('Click/Tap to skip', GAME_WIDTH / 2, GAME_HEIGHT - 20);
     } else {
-        ctx.fillText('Press R to replay', canvas.width / 2, canvas.height - 20);
+        ctx.fillText('Click/Tap to replay (or press R)', GAME_WIDTH / 2, GAME_HEIGHT - 20);
     }
 
     // Animation
     creditsOffset += 2;
 
     // End of credits - return to game over
-    if (creditsOffset > (credits.length * spacing) + canvas.height + 500) {
+    if (creditsOffset > (credits.length * spacing) + GAME_HEIGHT + 500) {
         gameState = 'GAME_OVER';
         creditsOffset = 0;
     }
@@ -686,6 +992,13 @@ function resetGame() {
     obstacles.length = 0;
     obstacleTimer = 0;
     comboTimer = 0;
+    collectibles.length = 0;
+    collectibleTimer = 0;
+    pigeons.length = 0;
+    pigeonSpawnTimer = 0;
+    pedestrians.length = 0;
+    pedestrianSpawnTimer = 0;
+    lastPatternType = null;
     gameOverTimer = 0;
     creditsOffset = 0;
     recordSubmitted = false;
@@ -699,12 +1012,12 @@ function resetGame() {
 // Draw Parisian street background
 function drawStreetBackground() {
     // Parisian gray sky (very dull, monochrome)
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.5);
+    const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT * 0.5);
     gradient.addColorStop(0, '#b8b8b8');
     gradient.addColorStop(0.5, '#c8c8c8');
     gradient.addColorStop(1, '#d0d0d0');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.5);
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT * 0.5);
 
     // Very subtle clouds
     ctx.fillStyle = 'rgba(160, 160, 160, 0.15)';
@@ -724,7 +1037,7 @@ function drawStreetBackground() {
 
     // Far Haussmann buildings (light gray stone - pierre de taille)
     ctx.fillStyle = '#d8d8d8';
-    for (let i = -1; i < canvas.width / 200 + 2; i++) {
+    for (let i = -1; i < GAME_WIDTH / 200 + 2; i++) {
         const x = i * 200 - buildingOffset1;
         const height = 160 + (i % 3) * 15; // 6-7 story uniform Haussmann height
         ctx.fillRect(x, groundY - 220 - height, 180, height);
@@ -766,7 +1079,7 @@ function drawStreetBackground() {
 
     // Closer Haussmann buildings (medium gray)
     ctx.fillStyle = '#c0c0c0';
-    for (let i = -1; i < canvas.width / 160 + 2; i++) {
+    for (let i = -1; i < GAME_WIDTH / 160 + 2; i++) {
         const x = i * 160 - buildingOffset2;
         const height = 130 + (i % 3) * 12;
         ctx.fillRect(x, groundY - 150 - height, 145, height);
@@ -807,7 +1120,7 @@ function drawStreetBackground() {
 
     // Parisian street lamps (very subtle)
     const lampOffset = (score * 2) % 250;
-    for (let i = 0; i < canvas.width / 250 + 2; i++) {
+    for (let i = 0; i < GAME_WIDTH / 250 + 2; i++) {
         const lampX = i * 250 - lampOffset;
 
         // Base
@@ -839,22 +1152,142 @@ function drawStreetBackground() {
 
     // Parisian sidewalk (pavé)
     ctx.fillStyle = '#9a9a9a';
-    ctx.fillRect(0, groundY - 20, canvas.width, 20);
+    ctx.fillRect(0, groundY - 20, GAME_WIDTH, 20);
 
     // Pavé pattern
     ctx.fillStyle = '#888888';
     const cobbleOffset = (score * 4) % 20;
-    for (let i = 0; i < canvas.width / 10 + 1; i++) {
+    for (let i = 0; i < GAME_WIDTH / 10 + 1; i++) {
         const x = i * 10 - cobbleOffset;
         for (let j = 0; j < 2; j++) {
             ctx.fillRect(x + (j % 2) * 5, groundY - 20 + j * 10, 4, 9);
         }
     }
+
+    // Update and draw pigeons (more frequent and bigger)
+    if (gameState === 'PLAYING') {
+        pigeonSpawnTimer++;
+        if (pigeonSpawnTimer > 150 + Math.random() * 100) {  // More frequent
+            pigeons.push({
+                x: -30,
+                y: groundY - 250 - Math.random() * 250,
+                velocityX: 3 + Math.random() * 2,
+                velocityY: (Math.random() - 0.5) * 0.8,
+                frame: 0,
+                size: 2 + Math.random()  // Variable sizes
+            });
+            pigeonSpawnTimer = 0;
+        }
+    }
+
+    pigeons.forEach((pigeon, index) => {
+        pigeon.x += pigeon.velocityX;
+        pigeon.y += pigeon.velocityY;
+        pigeon.frame++;
+
+        // Bigger pigeon sprite
+        const wingUp = Math.floor(pigeon.frame / 8) % 2 === 0;
+        const s = pigeon.size || 2;  // Size multiplier
+        ctx.fillStyle = '#404040';
+        // Body
+        ctx.fillRect(pigeon.x + s, pigeon.y, s * 2, s);
+        // Head
+        ctx.fillRect(pigeon.x + s * 2, pigeon.y - s/2, s, s);
+        // Wings
+        if (wingUp) {
+            ctx.fillRect(pigeon.x, pigeon.y - s, s * 4, s);
+        } else {
+            ctx.fillRect(pigeon.x, pigeon.y, s * 4, s);
+        }
+        // Tail
+        ctx.fillRect(pigeon.x, pigeon.y + s/2, s, s/2);
+
+        if (pigeon.x > GAME_WIDTH + 50) {
+            pigeons.splice(index, 1);
+        }
+    });
+
+    // Update and draw pedestrians (more frequent and bigger)
+    if (gameState === 'PLAYING') {
+        pedestrianSpawnTimer++;
+        if (pedestrianSpawnTimer > 100 + Math.random() * 80) {  // More frequent
+            pedestrians.push({
+                x: GAME_WIDTH + 20,
+                y: groundY - 50,
+                speed: 0.8 + Math.random() * 0.8,
+                frame: 0,
+                color: Math.random() > 0.5 ? '#404040' : '#505050',
+                size: 2 + Math.random() * 0.5,  // Variable sizes
+                type: Math.random() > 0.7 ? 'jogger' : 'walker'
+            });
+            pedestrianSpawnTimer = 0;
+        }
+    }
+
+    pedestrians.forEach((ped, index) => {
+        ped.x -= ped.speed;
+        ped.frame++;
+
+        // Bigger pedestrian sprites
+        const legFrame = Math.floor(ped.frame / 12) % 2;
+        const s = ped.size || 2;  // Size multiplier
+        ctx.fillStyle = ped.color;
+
+        if (ped.type === 'jogger') {
+            // Jogger with more animated pose
+            // Head
+            ctx.fillRect(ped.x + s * 2, ped.y, s * 2, s * 2);
+            // Body (leaning forward)
+            ctx.fillRect(ped.x + s * 1.5, ped.y + s * 2, s * 3, s * 4);
+            // Arms (swinging)
+            if (legFrame === 0) {
+                ctx.fillRect(ped.x + s * 0.5, ped.y + s * 2, s, s * 3);
+                ctx.fillRect(ped.x + s * 4.5, ped.y + s * 3, s, s * 2);
+            } else {
+                ctx.fillRect(ped.x + s * 4.5, ped.y + s * 2, s, s * 3);
+                ctx.fillRect(ped.x + s * 0.5, ped.y + s * 3, s, s * 2);
+            }
+            // Legs (running)
+            if (legFrame === 0) {
+                ctx.fillRect(ped.x + s, ped.y + s * 6, s * 1.5, s * 4);
+                ctx.fillRect(ped.x + s * 3.5, ped.y + s * 6, s * 1.5, s * 3);
+            } else {
+                ctx.fillRect(ped.x + s * 3.5, ped.y + s * 6, s * 1.5, s * 4);
+                ctx.fillRect(ped.x + s, ped.y + s * 6, s * 1.5, s * 3);
+            }
+        } else {
+            // Walker with casual pose
+            // Head
+            ctx.fillRect(ped.x + s * 1.5, ped.y, s * 2, s * 2);
+            // Body
+            ctx.fillRect(ped.x + s * 1.5, ped.y + s * 2, s * 2, s * 4);
+            // Arms
+            ctx.fillRect(ped.x + s * 0.5, ped.y + s * 2.5, s, s * 3);
+            ctx.fillRect(ped.x + s * 3.5, ped.y + s * 2.5, s, s * 3);
+            // Legs (walking)
+            if (legFrame === 0) {
+                ctx.fillRect(ped.x + s, ped.y + s * 6, s * 1.5, s * 4);
+                ctx.fillRect(ped.x + s * 2.5, ped.y + s * 6, s * 1.5, s * 4);
+            } else {
+                ctx.fillRect(ped.x + s * 1.5, ped.y + s * 6, s * 1.5, s * 4);
+                ctx.fillRect(ped.x + s * 2, ped.y + s * 6, s * 1.5, s * 4);
+            }
+        }
+
+        if (ped.x < -30) {
+            pedestrians.splice(index, 1);
+        }
+    });
 }
 
 // Main game loop
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Apply scaling transformation for consistent game coordinates
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
 
     // Street background
     drawStreetBackground();
@@ -866,6 +1299,7 @@ function gameLoop() {
     } else if (gameState === 'PLAYING') {
         updatePlayer();
         updateObstacles();
+        updateCollectibles();
         animationFrame++;
 
         // Draw obstacles
@@ -875,11 +1309,20 @@ function gameLoop() {
 
         drawPlayer();
 
+        // Draw collectibles AFTER player so they're always visible
+        collectibles.forEach(collectible => {
+            drawCollectible(collectible);
+        });
+
+
         // Check collisions
         if (checkCollision()) {
             gameState = 'GAME_OVER';
             gameOverTimer = 0;
         }
+
+        // Check collectible collection
+        checkCollectibleCollection();
 
         // Display score
         ctx.fillStyle = '#fff';
@@ -895,11 +1338,11 @@ function gameLoop() {
         if (leaderboard.length > 0) {
             ctx.textAlign = 'right';
             ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(canvas.width - 280, 10, 270, 30 + leaderboard.length * 30);
+            ctx.fillRect(GAME_WIDTH - 280, 10, 270, 30 + leaderboard.length * 30);
 
             ctx.fillStyle = '#ffd700';
             ctx.font = 'bold 20px "Courier New"';
-            ctx.fillText('🏆 TOP 3', canvas.width - 20, 35);
+            ctx.fillText('🏆 TOP 3', GAME_WIDTH - 20, 35);
 
             leaderboard.forEach((entry, index) => {
                 const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
@@ -907,7 +1350,7 @@ function gameLoop() {
                 ctx.fillStyle = color;
                 ctx.font = '18px "Courier New"';
                 const text = `${medal} ${entry.score} - ${entry.name}`;
-                ctx.fillText(text, canvas.width - 20, 65 + index * 30);
+                ctx.fillText(text, GAME_WIDTH - 20, 65 + index * 30);
             });
 
             ctx.textAlign = 'left';
@@ -930,6 +1373,9 @@ function gameLoop() {
     } else if (gameState === 'CREDITS') {
         drawCredits();
     }
+
+    // Restore transformation
+    ctx.restore();
 
     requestAnimationFrame(gameLoop);
 }
@@ -954,15 +1400,23 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-canvas.addEventListener('click', () => {
+// Touch and click events
+function handleTap() {
     if (gameState === 'START') {
         gameState = 'PLAYING';
     } else if (gameState === 'PLAYING') {
         jump();
+    } else if (gameState === 'GAME_OVER') {
+        resetGame();
     } else if (gameState === 'CREDITS') {
-        // Skip le générique
         creditsOffset = (credits.length * 300) + canvas.height + 300;
     }
+}
+
+canvas.addEventListener('click', handleTap);
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handleTap();
 });
 
 // Resizing

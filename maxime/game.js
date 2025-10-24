@@ -4,11 +4,15 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+// Normalize game speed based on screen width (reference: 1920px desktop)
+const BASE_SCREEN_WIDTH = 1920;
+const speedMultiplier = canvas.width / BASE_SCREEN_WIDTH;
+
 // Game variables
 let gameState = 'START'; // START, PLAYING, GAME_OVER, CREDITS
 let score = 0;
 let leaderboard = [];
-let gameSpeed = 6;
+let gameSpeed = 6 * speedMultiplier;
 let gravity = 0.8;
 let creditsOffset = 0;
 let gameOverTimer = 0;
@@ -425,9 +429,9 @@ function updateObstacles() {
             obstacles.splice(index, 1);
             score++;
 
-            // Progressive speed increase after score 10
+            // Progressive speed increase after score 10 (normalized to screen size)
             if (score > 10 && score % 5 === 0) {
-                gameSpeed += 0.3;
+                gameSpeed += 0.3 * speedMultiplier;
             }
         }
     });
@@ -461,7 +465,7 @@ function drawStartScreen() {
     ctx.fillText('Help Maxime and his dog avoid obstacles in Paris!', canvas.width / 2, canvas.height / 2 - 10);
 
     ctx.font = '20px "Courier New"';
-    ctx.fillText('Press SPACE to jump (double jump enabled!)', canvas.width / 2, canvas.height / 2 + 40);
+    ctx.fillText('Tap to jump (double jump enabled!)', canvas.width / 2, canvas.height / 2 + 40);
 
     if (leaderboard.length > 0) {
         ctx.fillStyle = '#ffd700';
@@ -475,7 +479,7 @@ function drawStartScreen() {
 
     ctx.fillStyle = '#fff';
     ctx.font = '18px "Courier New"';
-    ctx.fillText('Press SPACE or click to start', canvas.width / 2, canvas.height / 2 + 130);
+    ctx.fillText('Tap to start', canvas.width / 2, canvas.height / 2 + 130);
 }
 
 // Show custom name input modal
@@ -599,7 +603,7 @@ function drawGameOver() {
 
     ctx.font = '16px "Courier New"';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillText('(R to replay now / SPACE for double jump!)', canvas.width / 2, canvas.height / 2 + 110);
+    ctx.fillText('(Tap to continue)', canvas.width / 2, canvas.height / 2 + 110);
 }
 
 // End credits
@@ -664,9 +668,9 @@ function drawCredits() {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.font = '16px "Courier New"';
     if (creditsOffset < (credits.length * spacing) + canvas.height) {
-        ctx.fillText('SPACE to skip - R to replay', canvas.width / 2, canvas.height - 20);
+        ctx.fillText('Tap to skip', canvas.width / 2, canvas.height - 20);
     } else {
-        ctx.fillText('Press R to replay', canvas.width / 2, canvas.height - 20);
+        ctx.fillText('Tap to replay', canvas.width / 2, canvas.height - 20);
     }
 
     // Animation
@@ -682,7 +686,7 @@ function drawCredits() {
 // Reset game
 function resetGame() {
     score = 0;
-    gameSpeed = 6;
+    gameSpeed = 6 * speedMultiplier;
     obstacles.length = 0;
     obstacleTimer = 0;
     comboTimer = 0;
@@ -954,15 +958,21 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-canvas.addEventListener('click', () => {
+// Touch and click events
+function handleTap() {
     if (gameState === 'START') {
         gameState = 'PLAYING';
     } else if (gameState === 'PLAYING') {
         jump();
     } else if (gameState === 'CREDITS') {
-        // Skip le générique
         creditsOffset = (credits.length * 300) + canvas.height + 300;
     }
+}
+
+canvas.addEventListener('click', handleTap);
+canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    handleTap();
 });
 
 // Resizing
