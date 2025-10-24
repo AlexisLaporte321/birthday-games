@@ -6,11 +6,15 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(express.json());
 
-// In-memory storage for world record (simple backend)
-let worldRecord = {
-    score: 0,
-    name: ''
-};
+// In-memory storage for top 3 leaderboards (separate for local and prod)
+let leaderboardLocal = [];
+let leaderboardProd = [];
+
+// Helper to determine if request is from localhost
+function isLocalhost(req) {
+    const host = req.get('host') || '';
+    return host.includes('localhost') || host.includes('127.0.0.1');
+}
 
 // Servir les fichiers statiques depuis public/
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -25,22 +29,42 @@ app.use(express.static(path.join(__dirname, 'public'), {
     }
 }));
 
-// API: Get world record
+// API: Get leaderboard (auto-detects local vs prod)
 app.get('/api/highscore', (req, res) => {
-    res.json({ worldRecord });
+    const leaderboard = isLocalhost(req) ? leaderboardLocal : leaderboardProd;
+    res.json({ leaderboard });
 });
 
-// API: Submit new score
+// API: Submit new score (auto-detects local vs prod)
 app.post('/api/highscore', (req, res) => {
     const { score, name } = req.body;
-    if (typeof score === 'number' && score > worldRecord.score) {
-        worldRecord = {
+    const isLocal = isLocalhost(req);
+    let leaderboard = isLocal ? leaderboardLocal : leaderboardProd;
+
+    if (typeof score === 'number' && score > 0) {
+        // Add new score
+        leaderboard.push({
             score,
             name: name || 'Anonymous'
-        };
-        res.json({ worldRecord, newRecord: true });
+        });
+
+        // Sort by score descending and keep only top 3
+        leaderboard.sort((a, b) => b.score - a.score);
+        leaderboard = leaderboard.slice(0, 3);
+
+        // Update the correct leaderboard
+        if (isLocal) {
+            leaderboardLocal = leaderboard;
+        } else {
+            leaderboardProd = leaderboard;
+        }
+
+        // Check if new score made it to top 3
+        const isTopScore = leaderboard.some(entry => entry.score === score && entry.name === (name || 'Anonymous'));
+
+        res.json({ leaderboard, newRecord: isTopScore });
     } else {
-        res.json({ worldRecord, newRecord: false });
+        res.json({ leaderboard, newRecord: false });
     }
 });
 

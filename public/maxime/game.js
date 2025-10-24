@@ -7,7 +7,7 @@ canvas.height = window.innerHeight;
 // Game variables
 let gameState = 'START'; // START, PLAYING, GAME_OVER, CREDITS
 let score = 0;
-let worldRecord = { score: 0, name: '' };
+let leaderboard = [];
 let gameSpeed = 6;
 let gravity = 0.8;
 let creditsOffset = 0;
@@ -15,13 +15,13 @@ let gameOverTimer = 0;
 let recordSubmitted = false;
 let animationFrame = 0;
 
-// Fetch world record on load
+// Fetch leaderboard on load
 fetch('/api/highscore')
     .then(res => res.json())
     .then(data => {
-        worldRecord = data.worldRecord;
+        leaderboard = data.leaderboard || [];
     })
-    .catch(err => console.error('Failed to fetch world record:', err));
+    .catch(err => console.error('Failed to fetch leaderboard:', err));
 
 // Character (Maxime + his dog)
 const player = {
@@ -425,9 +425,9 @@ function updateObstacles() {
             obstacles.splice(index, 1);
             score++;
 
-            // Progressive speed increase
-            if (score % 10 === 0 && gameSpeed < 12) {
-                gameSpeed += 0.5;
+            // Progressive speed increase after score 10
+            if (score > 10 && score % 5 === 0) {
+                gameSpeed += 0.3;
             }
         }
     });
@@ -463,12 +463,13 @@ function drawStartScreen() {
     ctx.font = '20px "Courier New"';
     ctx.fillText('Press SPACE to jump (double jump enabled!)', canvas.width / 2, canvas.height / 2 + 40);
 
-    if (worldRecord.score > 0) {
+    if (leaderboard.length > 0) {
         ctx.fillStyle = '#ffd700';
         ctx.font = '22px "Courier New"';
-        const recordText = worldRecord.name ?
-            `🌍 World Record: ${worldRecord.score} (${worldRecord.name})` :
-            `🌍 World Record: ${worldRecord.score}`;
+        const topScore = leaderboard[0];
+        const recordText = topScore.name ?
+            `🌍 World Record: ${topScore.score} (${topScore.name})` :
+            `🌍 World Record: ${topScore.score}`;
         ctx.fillText(recordText, canvas.width / 2, canvas.height / 2 + 90);
     }
 
@@ -546,8 +547,10 @@ function showNameInput() {
 
 // Game over screen
 function drawGameOver() {
-    // Submit score to API if it's a new world record (only once)
-    if (score > worldRecord.score && score > 0 && !recordSubmitted) {
+    const topScore = leaderboard.length > 0 ? leaderboard[0].score : 0;
+
+    // Submit score to API if it's a potential top 3 score (only once)
+    if (score > 0 && !recordSubmitted && (leaderboard.length < 3 || score > leaderboard[leaderboard.length - 1].score)) {
         recordSubmitted = true;
 
         showNameInput().then(playerName => {
@@ -558,7 +561,7 @@ function drawGameOver() {
             })
             .then(res => res.json())
             .then(data => {
-                worldRecord = data.worldRecord;
+                leaderboard = data.leaderboard || [];
             })
             .catch(err => console.error('Failed to submit score:', err));
         });
@@ -576,16 +579,17 @@ function drawGameOver() {
     ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 - 10);
 
     // Show new world record or current world record
-    if (score >= worldRecord.score && score > 0) {
+    if (score >= topScore && score > 0) {
         ctx.fillStyle = '#ffd700';
         ctx.font = 'bold 28px "Courier New"';
         ctx.fillText('🌍 NEW WORLD RECORD! 🌍', canvas.width / 2, canvas.height / 2 + 30);
-    } else if (worldRecord.score > 0) {
+    } else if (topScore > 0) {
         ctx.fillStyle = '#fff';
         ctx.font = '24px "Courier New"';
-        const recordText = worldRecord.name ?
-            `World Record: ${worldRecord.score} (${worldRecord.name})` :
-            `World Record: ${worldRecord.score}`;
+        const topEntry = leaderboard[0];
+        const recordText = topEntry.name ?
+            `World Record: ${topEntry.score} (${topEntry.name})` :
+            `World Record: ${topEntry.score}`;
         ctx.fillText(recordText, canvas.width / 2, canvas.height / 2 + 30);
     }
 
@@ -877,23 +881,37 @@ function gameLoop() {
             gameOverTimer = 0;
         }
 
-        // Display score and world record
+        // Display score
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 24px "Courier New"';
         ctx.textAlign = 'left';
         ctx.fillText(`Score: ${score}`, 20, 40);
 
-        if (worldRecord.score > 0) {
-            ctx.fillStyle = score >= worldRecord.score ? '#ffd700' : '#fff';
-            const wrText = worldRecord.name ?
-                `🌍 WR: ${worldRecord.score} (${worldRecord.name})` :
-                `🌍 WR: ${worldRecord.score}`;
-            ctx.fillText(wrText, 20, 70);
-        }
-
         // Double jump indicator
         ctx.fillStyle = player.jumpCount === 0 ? '#4dabf7' : (player.jumpCount === 1 ? '#ffa500' : '#ff6b6b');
-        ctx.fillText(`Jumps: ${'●'.repeat(player.maxJumps - player.jumpCount)}${'○'.repeat(player.jumpCount)}`, 20, 100);
+        ctx.fillText(`Jumps: ${'●'.repeat(player.maxJumps - player.jumpCount)}${'○'.repeat(player.jumpCount)}`, 20, 70);
+
+        // Leaderboard in top right corner
+        if (leaderboard.length > 0) {
+            ctx.textAlign = 'right';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(canvas.width - 280, 10, 270, 30 + leaderboard.length * 30);
+
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 20px "Courier New"';
+            ctx.fillText('🏆 TOP 3', canvas.width - 20, 35);
+
+            leaderboard.forEach((entry, index) => {
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+                const color = index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : '#cd7f32';
+                ctx.fillStyle = color;
+                ctx.font = '18px "Courier New"';
+                const text = `${medal} ${entry.score} - ${entry.name}`;
+                ctx.fillText(text, canvas.width - 20, 65 + index * 30);
+            });
+
+            ctx.textAlign = 'left';
+        }
     } else if (gameState === 'GAME_OVER') {
         // Draw obstacles in frozen state
         obstacles.forEach(obstacle => {
