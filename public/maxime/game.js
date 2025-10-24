@@ -1,10 +1,10 @@
-// Configuration du canvas
+// Canvas configuration
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-// Variables du jeu
+// Game variables
 let gameState = 'START'; // START, PLAYING, GAME_OVER, CREDITS
 let score = 0;
 let gameSpeed = 6;
@@ -12,7 +12,7 @@ let gravity = 0.8;
 let creditsOffset = 0;
 let gameOverTimer = 0;
 
-// Personnage (Maxime + son chien)
+// Character (Maxime + his dog)
 const player = {
     x: 100,
     y: canvas.height - 220,
@@ -31,7 +31,7 @@ let obstacleTimer = 0;
 const obstacleInterval = 120;
 let comboTimer = 0;
 
-// Sol
+// Ground
 const groundY = canvas.height - 80;
 
 // Sprites pixel art
@@ -46,7 +46,7 @@ function drawPixelArt(x, y, pixels, scale = 2) {
     });
 }
 
-// Maxime et son chien (pixel art)
+// Maxime and his dog (pixel art)
 function drawPlayer() {
     const maxime = [
         [0, 0, '#ffdbac', '#ffdbac', '#ffdbac', 0, 0],
@@ -71,10 +71,10 @@ function drawPlayer() {
     drawPixelArt(player.x + 50, player.y + 60, chien, 6);
 }
 
-// Sprites des obstacles thématiques
+// Themed obstacle sprites
 const obstacleSprites = {
     costume: {
-        // Homme en costume avec cravate
+        // Man in suit with tie
         pixels: [
             [0, 0, 0, '#8b6f47', '#8b6f47', '#8b6f47', 0, 0, 0],
             [0, 0, '#8b6f47', '#ffdbac', '#ffdbac', '#ffdbac', '#8b6f47', 0, 0],
@@ -99,7 +99,7 @@ const obstacleSprites = {
         height: 68
     },
     laptop: {
-        // Ordinateur portable ouvert
+        // Open laptop
         pixels: [
             [0, 0, '#333', '#333', '#333', '#333', '#333', '#333', 0, 0],
             [0, '#333', '#87ceeb', '#87ceeb', '#87ceeb', '#87ceeb', '#87ceeb', '#87ceeb', '#333', 0],
@@ -115,7 +115,7 @@ const obstacleSprites = {
         height: 40
     },
     meeting: {
-        // Table de réunion avec 3 personnes
+        // Meeting table with 3 people
         pixels: [
             [0, 0, '#ffdbac', '#ffdbac', 0, 0, '#d4a574', '#d4a574', 0, 0, '#f4a261', '#f4a261', 0, 0],
             [0, '#ffdbac', '#000', '#000', '#ffdbac', '#d4a574', '#000', '#000', '#d4a574', '#f4a261', '#000', '#000', '#f4a261', 0],
@@ -132,7 +132,7 @@ const obstacleSprites = {
         height: 36
     },
     coffee: {
-        // Tasse de café fumante
+        // Steaming coffee cup
         pixels: [
             [0, 0, 0, '#ccc', 0, '#ccc', 0, 0, 0, 0],
             [0, 0, '#ccc', 0, '#ccc', 0, 0, 0, 0, 0],
@@ -150,7 +150,7 @@ const obstacleSprites = {
         height: 50
     },
     postit: {
-        // Post-it avec texte
+        // Post-it with text
         pixels: [
             ['#ffd60a', '#ffd60a', '#ffd60a', '#ffd60a', '#ffd60a', '#ffd60a'],
             ['#ffd60a', '#333', '#333', '#333', '#333', '#ffd60a'],
@@ -165,64 +165,64 @@ const obstacleSprites = {
     }
 };
 
-// Dessiner un obstacle
+// Draw an obstacle
 function drawObstacle(obstacle) {
     const sprite = obstacleSprites[obstacle.type];
     drawPixelArt(obstacle.x, obstacle.y, sprite.pixels, sprite.scale);
 }
 
-// Générique
+// Credits
 const credits = [
     {
-        title: 'MAXIME & SON CHIEN',
-        description: 'Nos héros courageux qui affrontent\nles défis du quotidien startup',
+        title: 'MAXIME & HIS DOG',
+        description: 'Our brave heroes who face\nthe daily startup challenges',
         sprite: 'player'
     },
     {
-        title: 'L\'HOMME EN COSTUME',
-        description: 'Le collègue mystérieux qui parle\nseulement de synergies et KPIs',
+        title: 'THE MAN IN SUIT',
+        description: 'The mysterious colleague who only talks\nabout synergies and KPIs',
         sprite: 'costume'
     },
     {
-        title: 'L\'ORDINATEUR PORTABLE',
-        description: 'Symbole des longues soirées de code\net des deadlines impossibles',
+        title: 'THE LAPTOP',
+        description: 'Symbol of long coding nights\nand impossible deadlines',
         sprite: 'laptop'
     },
     {
-        title: 'LA RÉUNION',
-        description: 'Trois personnes qui auraient pu\nenvoyer un email',
+        title: 'THE MEETING',
+        description: 'Three people who could have\nsent an email',
         sprite: 'meeting'
     },
     {
-        title: 'LE CAFÉ',
-        description: 'Le carburant essentiel pour\nsurvivre dans la jungle startup',
+        title: 'THE COFFEE',
+        description: 'Essential fuel to survive\nin the startup jungle',
         sprite: 'coffee'
     },
     {
-        title: 'LE POST-IT',
-        description: 'Les TODO qui s\'accumulent\net volent partout',
+        title: 'THE POST-IT',
+        description: 'TODOs that pile up\nand fly everywhere',
         sprite: 'postit'
     },
     {
         title: '',
-        description: 'JOYEUX ANNIVERSAIRE MAXIME!\n\n🎂 🎉 🎈',
+        description: 'HAPPY BIRTHDAY MAXIME!\n\n🎂 🎉 🎈',
         sprite: null
     }
 ];
 
-// Sol et décor
+// Ground and decor
 function drawGround() {
     ctx.fillStyle = '#8b7355';
     ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
 
-    // Herbe
+    // Grass
     ctx.fillStyle = '#95d5b2';
     for (let i = 0; i < canvas.width; i += 20) {
         ctx.fillRect(i + (score % 20), groundY - 5, 10, 5);
     }
 }
 
-// Saut
+// Jump
 function jump() {
     if (!player.jumping && gameState === 'PLAYING') {
         player.velocityY = -18;
@@ -230,7 +230,7 @@ function jump() {
     }
 }
 
-// Mise à jour du joueur
+// Update player
 function updatePlayer() {
     player.velocityY += gravity;
     player.y += player.velocityY;
@@ -242,7 +242,7 @@ function updatePlayer() {
     }
 }
 
-// Création des obstacles
+// Create obstacles
 function createObstacle() {
     const types = ['costume', 'laptop', 'meeting', 'coffee', 'postit'];
     const type = types[Math.floor(Math.random() * types.length)];
@@ -250,13 +250,13 @@ function createObstacle() {
 
     let yPos;
     if (type === 'postit') {
-        // Post-its volent dans les airs
+        // Post-its fly in the air
         yPos = groundY - 150 - Math.random() * 50;
     } else if (type === 'laptop') {
-        // Ordinateurs au sol
+        // Laptops on the ground
         yPos = groundY - sprite.pixels.length * sprite.scale;
     } else {
-        // Autres obstacles debout
+        // Other standing obstacles
         yPos = groundY - sprite.pixels.length * sprite.scale;
     }
 
@@ -269,25 +269,25 @@ function createObstacle() {
     });
 }
 
-// Mise à jour des obstacles
+// Update obstacles
 function updateObstacles() {
     obstacleTimer++;
 
-    // Intervalle variable pour plus de rythme
+    // Variable interval for more rhythm
     const currentInterval = 80 + Math.random() * 70;
 
     if (obstacleTimer > currentInterval) {
         createObstacle();
 
-        // Parfois créer un combo (2 obstacles rapprochés)
+        // Sometimes create a combo (2 close obstacles)
         if (Math.random() < 0.2) {
-            comboTimer = 30; // Créer un obstacle dans 30 frames
+            comboTimer = 30; // Create an obstacle in 30 frames
         }
 
         obstacleTimer = 0;
     }
 
-    // Gestion des combos
+    // Combo management
     if (comboTimer > 0) {
         comboTimer--;
         if (comboTimer === 0) {
@@ -302,7 +302,7 @@ function updateObstacles() {
             obstacles.splice(index, 1);
             score++;
 
-            // Augmentation progressive de la vitesse
+            // Progressive speed increase
             if (score % 10 === 0 && gameSpeed < 12) {
                 gameSpeed += 0.5;
             }
@@ -310,10 +310,10 @@ function updateObstacles() {
     });
 }
 
-// Détection de collision
+// Collision detection
 function checkCollision() {
     return obstacles.some(obstacle => {
-        // Marge de tolérance réduite pour de meilleures collisions
+        // Reduced tolerance margin for better collisions
         const marginX = 10;
         const marginY = 15;
 
@@ -324,7 +324,7 @@ function checkCollision() {
     });
 }
 
-// Écran de départ
+// Start screen
 function drawStartScreen() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -332,16 +332,16 @@ function drawStartScreen() {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 48px "Courier New"';
     ctx.textAlign = 'center';
-    ctx.fillText('🎉 JOYEUX ANNIVERSAIRE MAXIME! 🎂', canvas.width / 2, canvas.height / 2 - 50);
+    ctx.fillText('🎉 HAPPY BIRTHDAY MAXIME! 🎂', canvas.width / 2, canvas.height / 2 - 50);
 
     ctx.font = '24px "Courier New"';
-    ctx.fillText('Aide Maxime et son chien à éviter les obstacles!', canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillText('Help Maxime and his dog avoid obstacles!', canvas.width / 2, canvas.height / 2 + 20);
 
     ctx.font = '20px "Courier New"';
-    ctx.fillText('Appuie sur ESPACE ou clique pour commencer', canvas.width / 2, canvas.height / 2 + 80);
+    ctx.fillText('Press SPACE or click to start', canvas.width / 2, canvas.height / 2 + 80);
 }
 
-// Écran de game over
+// Game over screen
 function drawGameOver() {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -352,19 +352,19 @@ function drawGameOver() {
     ctx.fillText('GAME OVER!', canvas.width / 2, canvas.height / 2 - 50);
 
     ctx.font = '32px "Courier New"';
-    ctx.fillText(`Score final: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
+    ctx.fillText(`Final score: ${score}`, canvas.width / 2, canvas.height / 2 + 20);
 
     ctx.font = '20px "Courier New"';
-    ctx.fillText('Générique dans quelques secondes...', canvas.width / 2, canvas.height / 2 + 70);
+    ctx.fillText('Credits in a few seconds...', canvas.width / 2, canvas.height / 2 + 70);
 
     ctx.font = '16px "Courier New"';
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.fillText('(R pour rejouer maintenant)', canvas.width / 2, canvas.height / 2 + 100);
+    ctx.fillText('(R to replay now)', canvas.width / 2, canvas.height / 2 + 100);
 }
 
-// Générique de fin
+// End credits
 function drawCredits() {
-    // Fond noir
+    // Black background
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -376,9 +376,9 @@ function drawCredits() {
     credits.forEach((credit, index) => {
         const y = yPos + (index * spacing);
 
-        // Ne dessiner que si visible à l'écran
+        // Only draw if visible on screen
         if (y > -200 && y < canvas.height + 200) {
-            // Dessiner le sprite
+            // Draw the sprite
             if (credit.sprite === 'player') {
                 const maxime = [
                     [0, 0, '#ffdbac', '#ffdbac', '#ffdbac', 0, 0],
@@ -405,7 +405,7 @@ function drawCredits() {
                 drawPixelArt(canvas.width / 2 - spriteWidth / 2, y - 80, sprite.pixels, sprite.scale);
             }
 
-            // Titre
+            // Title
             ctx.fillStyle = '#ffd60a';
             ctx.font = 'bold 36px "Courier New"';
             ctx.fillText(credit.title, canvas.width / 2, y + 50);
@@ -420,26 +420,26 @@ function drawCredits() {
         }
     });
 
-    // Indication skip/rejouer
+    // Skip/replay indication
     ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.font = '16px "Courier New"';
     if (creditsOffset < (credits.length * spacing) + canvas.height) {
-        ctx.fillText('ESPACE pour passer - R pour rejouer', canvas.width / 2, canvas.height - 20);
+        ctx.fillText('SPACE to skip - R to replay', canvas.width / 2, canvas.height - 20);
     } else {
-        ctx.fillText('Appuie sur R pour rejouer', canvas.width / 2, canvas.height - 20);
+        ctx.fillText('Press R to replay', canvas.width / 2, canvas.height - 20);
     }
 
     // Animation
     creditsOffset += 2;
 
-    // Fin du générique - retour au game over
+    // End of credits - return to game over
     if (creditsOffset > (credits.length * spacing) + canvas.height + 500) {
         gameState = 'GAME_OVER';
         creditsOffset = 0;
     }
 }
 
-// Réinitialisation du jeu
+// Reset game
 function resetGame() {
     score = 0;
     gameSpeed = 6;
@@ -454,11 +454,11 @@ function resetGame() {
     gameState = 'PLAYING';
 }
 
-// Boucle de jeu principale
+// Main game loop
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Arrière-plan
+    // Background
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
     gradient.addColorStop(0, '#87ceeb');
     gradient.addColorStop(1, '#f0e68c');
@@ -474,23 +474,23 @@ function gameLoop() {
         updatePlayer();
         updateObstacles();
 
-        // Dessiner les obstacles
+        // Draw obstacles
         obstacles.forEach(obstacle => {
             drawObstacle(obstacle);
         });
 
         drawPlayer();
 
-        // Vérifier les collisions
+        // Check collisions
         if (checkCollision()) {
             gameState = 'GAME_OVER';
             gameOverTimer = 0;
         }
 
-        // Afficher le score
+        // Display score
         document.getElementById('scoreDisplay').textContent = score;
     } else if (gameState === 'GAME_OVER') {
-        // Dessiner les obstacles en état figé
+        // Draw obstacles in frozen state
         obstacles.forEach(obstacle => {
             drawObstacle(obstacle);
         });
@@ -498,9 +498,9 @@ function gameLoop() {
         drawPlayer();
         drawGameOver();
 
-        // Lancer automatiquement le générique après 2 secondes
+        // Automatically start credits after 2 seconds
         gameOverTimer++;
-        if (gameOverTimer > 120) { // 120 frames = ~2 secondes
+        if (gameOverTimer > 120) { // 120 frames = ~2 seconds
             gameState = 'CREDITS';
             creditsOffset = 0;
         }
@@ -511,7 +511,7 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Contrôles
+// Controls
 document.addEventListener('keydown', (e) => {
     if (e.code === 'Space') {
         e.preventDefault();
@@ -520,12 +520,12 @@ document.addEventListener('keydown', (e) => {
         } else if (gameState === 'PLAYING') {
             jump();
         } else if (gameState === 'CREDITS') {
-            // Skip le générique
+            // Skip the credits
             creditsOffset = (credits.length * 300) + canvas.height + 300;
         }
     }
 
-    // Touche R pour rejouer directement
+    // R key to replay directly
     if (e.code === 'KeyR' && (gameState === 'GAME_OVER' || gameState === 'CREDITS')) {
         resetGame();
     }
@@ -542,7 +542,7 @@ canvas.addEventListener('click', () => {
     }
 });
 
-// Redimensionnement
+// Resizing
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -550,5 +550,5 @@ window.addEventListener('resize', () => {
     player.y = player.groundY;
 });
 
-// Démarrage du jeu
+// Start game
 gameLoop();
