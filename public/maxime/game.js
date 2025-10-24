@@ -22,6 +22,7 @@ const offsetY = (canvas.height - GAME_HEIGHT * scale) / 2;
 // Game variables
 let gameState = 'START'; // START, PLAYING, GAME_OVER, CREDITS
 let score = 0;
+let collectiblesCollected = 0;
 let leaderboard = [];
 let gameSpeed = 6;
 let gravity = 0.8;
@@ -61,7 +62,6 @@ let comboTimer = 0;
 
 // Collectibles (birthday items)
 const collectibles = [];
-let collectibleTimer = 0;
 
 
 // Obstacle patterns
@@ -389,7 +389,6 @@ function drawCollectible(collectible) {
 
     // Check if sprite exists
     if (!sprite) {
-        console.error(`Missing sprite for collectible type: ${collectible.type}`);
         return;
     }
 
@@ -608,7 +607,6 @@ function createCollectible() {
 
     // Check if sprite exists
     if (!sprite) {
-        console.error(`Missing sprite for collectible type: ${type}`);
         return;
     }
 
@@ -678,8 +676,14 @@ function updateObstacles() {
             createPattern('tunnel');
         }
 
-        // Always create a collectible after an obstacle
-        collectibleTimer = 15 + Math.random() * 25; // Create collectible in 15-40 frames
+        // Create collectible after obstacle with 40% chance
+        if (Math.random() < 0.4) {
+            setTimeout(() => {
+                if (gameState === 'PLAYING') {
+                    createCollectible();
+                }
+            }, 500 + Math.random() * 1000); // Delay 0.5-1.5 seconds
+        }
 
         obstacleTimer = 0;
     }
@@ -689,14 +693,6 @@ function updateObstacles() {
         comboTimer--;
         if (comboTimer === 0) {
             createObstacle();
-        }
-    }
-
-    // Collectible timer
-    if (collectibleTimer > 0) {
-        collectibleTimer--;
-        if (collectibleTimer === 0) {
-            createCollectible();
         }
     }
 
@@ -758,6 +754,7 @@ function checkCollectibleCollection() {
             // Collect the item
             collectibles.splice(index, 1);
             score += 5; // +5 bonus to score
+            collectiblesCollected++;
         }
     });
 }
@@ -997,12 +994,12 @@ function drawCredits() {
 // Reset game
 function resetGame() {
     score = 0;
+    collectiblesCollected = 0;
     gameSpeed = 6;
     obstacles.length = 0;
     obstacleTimer = 0;
     comboTimer = 0;
     collectibles.length = 0;
-    collectibleTimer = 0;
     pigeons.length = 0;
     pigeonSpawnTimer = 0;
     pedestrians.length = 0;
@@ -1342,6 +1339,11 @@ function gameLoop() {
         // Double jump indicator
         ctx.fillStyle = player.jumpCount === 0 ? '#4dabf7' : (player.jumpCount === 1 ? '#ffa500' : '#ff6b6b');
         ctx.fillText(`Jumps: ${'●'.repeat(player.maxJumps - player.jumpCount)}${'○'.repeat(player.jumpCount)}`, 20, 70);
+
+        // Collectibles counter
+        ctx.fillStyle = '#ffd700';
+        ctx.font = 'bold 20px "Courier New"';
+        ctx.fillText(`🎁 Bonus: ${collectiblesCollected}`, 20, 100);
 
         // Leaderboard in top right corner
         if (leaderboard.length > 0) {
