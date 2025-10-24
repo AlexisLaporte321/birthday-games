@@ -387,6 +387,11 @@ function drawObstacle(obstacle) {
 function drawCollectible(collectible) {
     const sprite = collectibleSprites[collectible.type];
 
+    // Check if sprite exists
+    if (!sprite) {
+        console.error(`Missing sprite for collectible type: ${collectible.type}`);
+        return;
+    }
 
     // Pulse animation - scale oscillation
     const pulseScale = 0.95 + Math.sin(animationFrame * 0.1) * 0.1;
@@ -601,6 +606,12 @@ function createCollectible() {
     const type = types[Math.floor(Math.random() * types.length)];
     const sprite = collectibleSprites[type];
 
+    // Check if sprite exists
+    if (!sprite) {
+        console.error(`Missing sprite for collectible type: ${type}`);
+        return;
+    }
+
     // Complex patterns - different heights for challenge
     let yPos;
     const heightPattern = Math.random();
@@ -667,10 +678,8 @@ function updateObstacles() {
             createPattern('tunnel');
         }
 
-        // 80% chance to create a collectible after an obstacle (increased visibility)
-        if (Math.random() < 0.8) {
-            collectibleTimer = 15 + Math.random() * 25; // Create collectible in 15-40 frames
-        }
+        // Always create a collectible after an obstacle
+        collectibleTimer = 15 + Math.random() * 25; // Create collectible in 15-40 frames
 
         obstacleTimer = 0;
     }
