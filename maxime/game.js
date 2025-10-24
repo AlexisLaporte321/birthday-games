@@ -15,12 +15,12 @@ let gameOverTimer = 0;
 // Character (Maxime + his dog)
 const player = {
     x: 100,
-    y: canvas.height - 220,
+    y: canvas.height - 170,
     width: 100,
     height: 120,
     velocityY: 0,
     jumping: false,
-    groundY: canvas.height - 220
+    groundY: canvas.height - 170
 };
 
 // Obstacles
@@ -546,7 +546,7 @@ canvas.addEventListener('click', () => {
 window.addEventListener('resize', () => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    player.groundY = canvas.height - 220;
+    player.groundY = canvas.height - 170;
     player.y = player.groundY;
 });
 
