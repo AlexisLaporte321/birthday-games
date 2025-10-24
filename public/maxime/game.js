@@ -31,6 +31,11 @@ let gameOverTimer = 0;
 let recordSubmitted = false;
 let animationFrame = 0;
 
+// Delta time for consistent speed across devices
+let lastFrameTime = 0;
+const TARGET_FPS = 60;
+const FRAME_TIME = 1000 / TARGET_FPS;
+
 // Fetch leaderboard on load
 fetch('/api/highscore')
     .then(res => res.json())
@@ -491,9 +496,9 @@ function jump() {
 }
 
 // Update player
-function updatePlayer() {
-    player.velocityY += gravity;
-    player.y += player.velocityY;
+function updatePlayer(deltaMultiplier = 1) {
+    player.velocityY += gravity * deltaMultiplier;
+    player.y += player.velocityY * deltaMultiplier;
 
     if (player.y >= player.groundY) {
         player.y = player.groundY;
@@ -646,7 +651,7 @@ function createCollectible() {
 }
 
 // Update obstacles
-function updateObstacles() {
+function updateObstacles(deltaMultiplier = 1) {
     obstacleTimer++;
 
     // Variable interval for more rhythm
@@ -691,7 +696,7 @@ function updateObstacles() {
     }
 
     obstacles.forEach((obstacle, index) => {
-        obstacle.x -= gameSpeed;
+        obstacle.x -= gameSpeed * deltaMultiplier;
 
         if (obstacle.x + obstacle.width < 0) {
             obstacles.splice(index, 1);
@@ -706,9 +711,9 @@ function updateObstacles() {
 }
 
 // Update collectibles
-function updateCollectibles() {
+function updateCollectibles(deltaMultiplier = 1) {
     collectibles.forEach((collectible, index) => {
-        collectible.x -= gameSpeed;
+        collectible.x -= gameSpeed * deltaMultiplier;
 
         // Remove if off screen (no score increase)
         if (collectible.x + collectible.width < 0) {
@@ -909,7 +914,7 @@ function drawGameOver() {
 }
 
 // End credits
-function drawCredits() {
+function drawCredits(deltaMultiplier = 1) {
     // Black background
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
@@ -975,7 +980,7 @@ function drawCredits() {
     }
 
     // Animation
-    creditsOffset += 2;
+    creditsOffset += 2 * deltaMultiplier;
 
     // End of credits - return to game over
     if (creditsOffset > (credits.length * spacing) + GAME_HEIGHT + 500) {
@@ -1009,7 +1014,7 @@ function resetGame() {
 }
 
 // Draw Parisian street background
-function drawStreetBackground() {
+function drawStreetBackground(deltaMultiplier = 1) {
     // Parisian gray sky (very dull, monochrome)
     const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT * 0.5);
     gradient.addColorStop(0, '#b8b8b8');
@@ -1180,8 +1185,8 @@ function drawStreetBackground() {
     }
 
     pigeons.forEach((pigeon, index) => {
-        pigeon.x += pigeon.velocityX;
-        pigeon.y += pigeon.velocityY;
+        pigeon.x += pigeon.velocityX * deltaMultiplier;
+        pigeon.y += pigeon.velocityY * deltaMultiplier;
         pigeon.frame++;
 
         // Bigger pigeon sprite
@@ -1224,7 +1229,7 @@ function drawStreetBackground() {
     }
 
     pedestrians.forEach((ped, index) => {
-        ped.x -= ped.speed;
+        ped.x -= ped.speed * deltaMultiplier;
         ped.frame++;
 
         // Bigger pedestrian sprites
@@ -1280,7 +1285,13 @@ function drawStreetBackground() {
 }
 
 // Main game loop
-function gameLoop() {
+function gameLoop(currentTime) {
+    // Calculate delta time for consistent speed
+    if (!lastFrameTime) lastFrameTime = currentTime;
+    const deltaTime = Math.min(currentTime - lastFrameTime, 100); // Cap at 100ms to prevent jumps
+    const deltaMultiplier = deltaTime / FRAME_TIME;
+    lastFrameTime = currentTime;
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Apply scaling transformation for consistent game coordinates
@@ -1289,16 +1300,16 @@ function gameLoop() {
     ctx.scale(scale, scale);
 
     // Street background
-    drawStreetBackground();
+    drawStreetBackground(deltaMultiplier);
     drawGround();
 
     if (gameState === 'START') {
         drawPlayer();
         drawStartScreen();
     } else if (gameState === 'PLAYING') {
-        updatePlayer();
-        updateObstacles();
-        updateCollectibles();
+        updatePlayer(deltaMultiplier);
+        updateObstacles(deltaMultiplier);
+        updateCollectibles(deltaMultiplier);
         animationFrame++;
 
         // Draw obstacles
@@ -1375,7 +1386,7 @@ function gameLoop() {
             creditsOffset = 0;
         }
     } else if (gameState === 'CREDITS') {
-        drawCredits();
+        drawCredits(deltaMultiplier);
     }
 
     // Restore transformation
