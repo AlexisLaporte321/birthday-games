@@ -221,13 +221,6 @@ function drawPlayer() {
 
     drawPixelArt(player.x, player.y - 10, maxime, 3);
     drawPixelArt(player.x + 45, player.y + 55, chien, 2.5);
-
-    // Debug hitbox in localhost (starts at player.y - 10 to include hat)
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        ctx.strokeStyle = 'rgba(0, 0, 255, 0.5)';  // Blue for player
-        ctx.lineWidth = 2;
-        ctx.strokeRect(player.x, player.y - 10, player.width, player.height);
-    }
 }
 
 // Themed obstacle sprites
@@ -374,13 +367,6 @@ const collectibleSprites = {
 function drawObstacle(obstacle) {
     const sprite = obstacleSprites[obstacle.type];
     drawPixelArt(obstacle.x, obstacle.y, sprite.pixels, sprite.scale);
-
-    // Debug hitbox in localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-    }
 }
 
 // Draw a collectible with animations
@@ -427,13 +413,6 @@ function drawCollectible(collectible) {
     }
 
     drawPixelArt(collectible.x + offsetX, collectible.y + offsetY, sprite.pixels, animatedScale);
-
-    // Debug hitbox in localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(collectible.x, collectible.y, collectible.width, collectible.height);
-    }
 }
 
 // Credits
@@ -442,6 +421,21 @@ const credits = [
         title: 'MAXIME & HIS DOG',
         description: 'Our brave heroes who face\nthe daily startup challenges',
         sprite: 'player'
+    },
+    {
+        title: 'BIRTHDAY BALLOON',
+        description: 'Floating high in the Paris sky\nWorth +5 points',
+        sprite: 'balloon'
+    },
+    {
+        title: 'BIRTHDAY CAKE',
+        description: 'Sweet celebration treat\nWorth +5 points',
+        sprite: 'cake'
+    },
+    {
+        title: 'BIRTHDAY GIFT',
+        description: 'Mystery box of joy\nWorth +5 points',
+        sprite: 'gift'
     },
     {
         title: 'THE MAN IN SUIT',
@@ -932,29 +926,28 @@ function drawCredits() {
         if (y > -200 && y < GAME_HEIGHT + 200) {
             // Draw the sprite
             if (credit.sprite === 'player') {
-                const maxime = [
-                    [0, 0, '#ffdbac', '#ffdbac', '#ffdbac', 0, 0],
-                    [0, '#ffdbac', '#ffdbac', '#ffdbac', '#ffdbac', '#ffdbac', 0],
-                    [0, '#333', '#fff', '#333', '#333', '#fff', 0],
-                    [0, '#ffdbac', '#ffdbac', '#ffdbac', '#ffdbac', '#ffdbac', 0],
-                    [0, 0, '#ff6b6b', '#ff6b6b', '#ff6b6b', 0, 0],
-                    [0, '#4dabf7', '#4dabf7', '#4dabf7', '#4dabf7', '#4dabf7', 0],
-                    [0, '#4dabf7', '#4dabf7', 0, '#4dabf7', '#4dabf7', 0],
-                    [0, '#333', '#333', 0, '#333', '#333', 0]
-                ];
-                const chien = [
-                    [0, '#8b4513', '#8b4513', 0, 0],
-                    ['#8b4513', '#8b4513', '#8b4513', '#8b4513', 0],
-                    ['#333', '#8b4513', '#8b4513', '#8b4513', '#8b4513'],
-                    [0, '#8b4513', '#8b4513', '#8b4513', 0],
-                    [0, '#654321', 0, '#654321', 0]
-                ];
-                drawPixelArt(GAME_WIDTH / 2 - 60, y - 100, maxime, 8);
-                drawPixelArt(GAME_WIDTH / 2 + 20, y - 50, chien, 8);
-            } else if (credit.sprite) {
+                // Save player position and restore after
+                const savedX = player.x;
+                const savedY = player.y;
+                player.x = GAME_WIDTH / 2 - 60;
+                player.y = y - 50;
+                drawPlayer();
+                player.x = savedX;
+                player.y = savedY;
+            } else if (credit.sprite === 'balloon' || credit.sprite === 'cake' || credit.sprite === 'gift') {
+                // Draw collectibles
+                const sprite = collectibleSprites[credit.sprite];
+                if (sprite) {
+                    const scale = sprite.scale * 2; // Make them bigger in credits
+                    const spriteWidth = sprite.pixels[0].length * scale;
+                    drawPixelArt(GAME_WIDTH / 2 - spriteWidth / 2, y - 80, sprite.pixels, scale);
+                }
+            } else if (credit.sprite && obstacleSprites[credit.sprite]) {
+                // Draw obstacles
                 const sprite = obstacleSprites[credit.sprite];
-                const spriteWidth = sprite.pixels[0].length * sprite.scale;
-                drawPixelArt(GAME_WIDTH / 2 - spriteWidth / 2, y - 80, sprite.pixels, sprite.scale);
+                const scale = sprite.scale * 1.5; // Make them a bit bigger
+                const spriteWidth = sprite.pixels[0].length * scale;
+                drawPixelArt(GAME_WIDTH / 2 - spriteWidth / 2, y - 80, sprite.pixels, scale);
             }
 
             // Title
