@@ -10,7 +10,9 @@
     "node": ">=18.x"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
     "@vercel/kv": "^3.0.0",
+    "dotenv": "^17.2.3",
     "express": "^4.18.2"
   }
 }

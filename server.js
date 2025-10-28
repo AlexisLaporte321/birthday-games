@@ -1,23 +1,43 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { neon } = require('@neondatabase/serverless');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Try to import Vercel KV (production), fallback to file storage (local dev)
-let kv = null;
-let useKV = false;
+// Initialize Neon database
+let sql = null;
+let useDB = false;
 try {
-    kv = require('@vercel/kv').kv;
-    // Check if KV env vars are present
-    if (process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN) {
-        useKV = true;
-        console.log('Using Vercel KV for leaderboard storage');
+    if (process.env.DATABASE_URL) {
+        sql = neon(process.env.DATABASE_URL);
+        useDB = true;
+        console.log('Using Neon PostgreSQL for leaderboard storage');
+
+        // Initialize database schema
+        (async () => {
+            try {
+                await sql`
+                    CREATE TABLE IF NOT EXISTS highscores (
+                        id SERIAL PRIMARY KEY,
+                        environment TEXT NOT NULL,
+                        score INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                `;
+                console.log('Database schema initialized');
+            } catch (error) {
+                console.error('Error initializing database schema:', error);
+            }
+        })();
     } else {
-        console.log('Using file-based storage for leaderboard (local dev)');
+        console.log('Using in-memory storage for leaderboard (local dev)');
     }
 } catch (e) {
-    console.log('Using file-based storage for leaderboard (local dev)');
+    console.error('Error initializing Neon:', e);
+    console.log('Using in-memory storage for leaderboard');
 }
 
 // Middleware
@@ -82,14 +102,21 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.get('/api/highscore', async (req, res) => {
     try {
         const isLocal = isLocalhost(req);
+        const environment = isLocal ? 'local' : 'prod';
         let leaderboard;
 
-        if (useKV) {
-            // Use Vercel KV
-            const key = isLocal ? 'leaderboard:local' : 'leaderboard:prod';
-            leaderboard = await kv.get(key) || [];
+        if (useDB) {
+            // Use Neon database
+            const rows = await sql`
+                SELECT score, name
+                FROM highscores
+                WHERE environment = ${environment}
+                ORDER BY score DESC
+                LIMIT 3
+            `;
+            leaderboard = rows;
         } else {
-            // Use file storage
+            // Use file storage fallback
             leaderboard = isLocal ? leaderboardLocal : leaderboardProd;
         }
 
@@ -105,35 +132,42 @@ app.post('/api/highscore', async (req, res) => {
     try {
         const { score, name } = req.body;
         const isLocal = isLocalhost(req);
+        const environment = isLocal ? 'local' : 'prod';
         let leaderboard;
-
-        if (useKV) {
-            // Use Vercel KV
-            const key = isLocal ? 'leaderboard:local' : 'leaderboard:prod';
-            leaderboard = await kv.get(key) || [];
-        } else {
-            // Use file storage
-            leaderboard = isLocal ? leaderboardLocal : leaderboardProd;
-        }
+        let isTopScore = false;
 
         if (typeof score === 'number' && score > 0) {
-            // Add new score
-            leaderboard.push({
-                score,
-                name: name || 'Anonymous'
-            });
+            if (useDB) {
+                // Insert new score into database
+                await sql`
+                    INSERT INTO highscores (environment, score, name)
+                    VALUES (${environment}, ${score}, ${name || 'Anonymous'})
+                `;
 
-            // Sort by score descending and keep only top 3
-            leaderboard.sort((a, b) => b.score - a.score);
-            leaderboard = leaderboard.slice(0, 3);
+                // Get top 3 scores for this environment
+                const rows = await sql`
+                    SELECT score, name
+                    FROM highscores
+                    WHERE environment = ${environment}
+                    ORDER BY score DESC
+                    LIMIT 3
+                `;
+                leaderboard = rows;
 
-            // Save leaderboard
-            if (useKV) {
-                // Save to Vercel KV
-                const key = isLocal ? 'leaderboard:local' : 'leaderboard:prod';
-                await kv.set(key, leaderboard);
+                // Check if new score made it to top 3
+                isTopScore = leaderboard.some(entry => entry.score === score && entry.name === (name || 'Anonymous'));
             } else {
-                // Save to file storage
+                // Use file storage fallback
+                leaderboard = isLocal ? [...leaderboardLocal] : [...leaderboardProd];
+
+                leaderboard.push({
+                    score,
+                    name: name || 'Anonymous'
+                });
+
+                leaderboard.sort((a, b) => b.score - a.score);
+                leaderboard = leaderboard.slice(0, 3);
+
                 if (isLocal) {
                     leaderboardLocal = leaderboard;
                     saveLeaderboard(LEADERBOARD_LOCAL_FILE, leaderboard);
@@ -141,13 +175,25 @@ app.post('/api/highscore', async (req, res) => {
                     leaderboardProd = leaderboard;
                     saveLeaderboard(LEADERBOARD_PROD_FILE, leaderboard);
                 }
-            }
 
-            // Check if new score made it to top 3
-            const isTopScore = leaderboard.some(entry => entry.score === score && entry.name === (name || 'Anonymous'));
+                isTopScore = leaderboard.some(entry => entry.score === score && entry.name === (name || 'Anonymous'));
+            }
 
             res.json({ leaderboard, newRecord: isTopScore });
         } else {
+            // Invalid score, just return current leaderboard
+            if (useDB) {
+                const rows = await sql`
+                    SELECT score, name
+                    FROM highscores
+                    WHERE environment = ${environment}
+                    ORDER BY score DESC
+                    LIMIT 3
+                `;
+                leaderboard = rows;
+            } else {
+                leaderboard = isLocal ? leaderboardLocal : leaderboardProd;
+            }
             res.json({ leaderboard, newRecord: false });
         }
     } catch (error) {
