@@ -326,9 +326,24 @@
 
         if (isLocalhost) {
             const marginX = 10, marginY = 15;
+            const spriteOffsetY = -10;
+
+            // Hitbox verte (zone de collision réelle)
             ctx.strokeStyle = '#00ff00';
             ctx.lineWidth = 2;
-            ctx.strokeRect(player.x + marginX, player.y + marginY, player.width - marginX * 2, player.height - marginY * 2);
+            ctx.strokeRect(
+                player.x + marginX,
+                (player.y + spriteOffsetY) + marginY,
+                player.width - marginX * 2,
+                player.height - marginY * 2
+            );
+
+            // Boîte jaune pointillée (limite complète du sprite)
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(player.x, player.y + spriteOffsetY, player.width, player.height);
+            ctx.setLineDash([]);
         }
     }
 
@@ -730,11 +745,12 @@
         return obstacles.some(obstacle => {
             const marginX = 10;
             const marginY = 15;
+            const spriteOffsetY = -10; // Sprite is drawn at player.y - 10
 
             return player.x + marginX < obstacle.x + obstacle.width &&
                    player.x + player.width - marginX > obstacle.x &&
-                   player.y + marginY < obstacle.y + obstacle.height &&
-                   player.y + player.height - marginY > obstacle.y;
+                   (player.y + spriteOffsetY) + marginY < obstacle.y + obstacle.height &&
+                   (player.y + spriteOffsetY) + player.height - marginY > obstacle.y;
         });
     }
 
