@@ -263,18 +263,146 @@
         }
 
         function drawBackground() {
-            // Sky
-            ctx.fillStyle = '#87ceeb';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Ground
-            ctx.fillStyle = '#8B7355';
+            // Mediterranean blue sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.5);
+            gradient.addColorStop(0, '#4a90e2');
+            gradient.addColorStop(0.5, '#74b3e2');
+            gradient.addColorStop(1, '#a8d5f2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height * 0.5);
+
+            // Lower sky
+            ctx.fillStyle = '#a8d5f2';
+            ctx.fillRect(0, canvas.height * 0.5, canvas.width, canvas.height * 0.5);
+
+            // Sun
+            ctx.fillStyle = 'rgba(255, 220, 100, 0.8)';
+            ctx.beginPath();
+            ctx.arc(canvas.width - 150, 100, 50, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Light clouds
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            const cloudOffset = (score * 0.1) % 600;
+            for (let i = 0; i < 3; i++) {
+                const cloudX = i * 350 - cloudOffset;
+                ctx.beginPath();
+                ctx.arc(cloudX, 80 + i * 40, 35, 0, Math.PI * 2);
+                ctx.arc(cloudX + 40, 80 + i * 40, 45, 0, Math.PI * 2);
+                ctx.arc(cloudX + 80, 80 + i * 40, 40, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Acropolis/Parthenon in far background (parallax)
+            const acropolisOffset = (score * 0.15) % 800;
+            ctx.fillStyle = '#e8e8e8';
+            const acropolisX = canvas.width / 2 - 200 - acropolisOffset;
+            const acropolisY = groundY - 350;
+
+            // Parthenon platform
+            ctx.fillRect(acropolisX, acropolisY + 80, 400, 20);
+
+            // Parthenon columns
+            for (let i = 0; i < 8; i++) {
+                const colX = acropolisX + 50 + i * 45;
+                ctx.fillRect(colX, acropolisY + 100, 12, 3);
+                ctx.fillRect(colX + 1, acropolisY + 30, 10, 70);
+                ctx.fillRect(colX - 2, acropolisY + 25, 16, 5);
+            }
+
+            // Parthenon roof
+            ctx.fillRect(acropolisX + 45, acropolisY + 20, 320, 5);
+            // Triangular pediment
+            ctx.beginPath();
+            ctx.moveTo(acropolisX + 40, acropolisY + 20);
+            ctx.lineTo(acropolisX + 205, acropolisY - 15);
+            ctx.lineTo(acropolisX + 370, acropolisY + 20);
+            ctx.closePath();
+            ctx.fill();
+
+            // Buildings in background (parallax effect)
+            const buildingOffset1 = (score * 0.3) % 350;
+
+            // Far neoclassical buildings
+            ctx.fillStyle = '#f5f5f5';
+            for (let i = -1; i < canvas.width / 200 + 2; i++) {
+                const x = i * 200 - buildingOffset1;
+                const height = 140 + (i % 3) * 20;
+                ctx.fillRect(x, groundY - 200 - height, 180, height);
+
+                // Flat roof with parapet
+                ctx.fillStyle = '#e8e8e8';
+                ctx.fillRect(x, groundY - 200 - height - 8, 180, 8);
+
+                // Windows
+                ctx.fillStyle = '#4a90e2';
+                const seed = i * 7;
+                for (let row = 0; row < 4; row++) {
+                    for (let col = 0; col < 3; col++) {
+                        if ((seed + row * 3 + col) % 11 === 0) {
+                            const winX = x + 20 + col * 55;
+                            const winY = groundY - 200 - height + 30 + row * 30;
+                            ctx.fillRect(winX, winY, 20, 25);
+                            ctx.beginPath();
+                            ctx.arc(winX + 10, winY, 10, Math.PI, 0);
+                            ctx.fill();
+                        }
+                    }
+                }
+
+                ctx.fillStyle = '#f5f5f5';
+            }
+
+            // Greek flags
+            const flagOffset = (score * 2) % 300;
+            for (let i = 0; i < canvas.width / 300 + 2; i++) {
+                const flagX = i * 300 - flagOffset;
+                const flagY = groundY - 50;
+
+                // Flag pole
+                ctx.fillStyle = '#666';
+                ctx.fillRect(flagX, flagY - 60, 2, 60);
+
+                // Greek flag (blue and white stripes)
+                ctx.fillStyle = '#4a90e2';
+                ctx.fillRect(flagX + 2, flagY - 55, 20, 3);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(flagX + 2, flagY - 52, 20, 3);
+                ctx.fillStyle = '#4a90e2';
+                ctx.fillRect(flagX + 2, flagY - 49, 20, 3);
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(flagX + 2, flagY - 46, 20, 3);
+                ctx.fillStyle = '#4a90e2';
+                ctx.fillRect(flagX + 2, flagY - 43, 20, 3);
+            }
+
+            // Olive trees
+            const treeOffset = (score * 1.5) % 200;
+            for (let i = 0; i < canvas.width / 200 + 2; i++) {
+                const treeX = i * 200 - treeOffset;
+                const treeY = groundY - 45;
+
+                // Trunk
+                ctx.fillStyle = '#8b4513';
+                ctx.fillRect(treeX - 3, treeY - 25, 6, 25);
+
+                // Foliage (olive green)
+                ctx.fillStyle = '#808000';
+                ctx.beginPath();
+                ctx.arc(treeX - 8, treeY - 25, 12, 0, Math.PI * 2);
+                ctx.arc(treeX + 8, treeY - 25, 12, 0, Math.PI * 2);
+                ctx.arc(treeX, treeY - 35, 14, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Ground (Mediterranean terracotta)
+            ctx.fillStyle = '#c67e4b';
             ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
-            
-            // Grass
-            ctx.fillStyle = '#228B22';
-            for (let i = 0; i < canvas.width; i += 20) {
-                ctx.fillRect(i, groundY - 5, 10, 5);
+
+            // Cobblestones
+            ctx.fillStyle = '#b36f42';
+            for (let i = 0; i < canvas.width; i += 30) {
+                ctx.fillRect(i + (score % 30), groundY - 5, 20, 5);
             }
         }
 
