@@ -43,15 +43,10 @@ try {
 // Middleware
 app.use(express.json());
 
-// Persistent storage paths
+// Persistent storage paths (only used if no database)
 const LEADERBOARD_DIR = path.join(__dirname, 'data');
 const LEADERBOARD_LOCAL_FILE = path.join(LEADERBOARD_DIR, 'leaderboard-local.json');
 const LEADERBOARD_PROD_FILE = path.join(LEADERBOARD_DIR, 'leaderboard-prod.json');
-
-// Create data directory if it doesn't exist
-if (!fs.existsSync(LEADERBOARD_DIR)) {
-    fs.mkdirSync(LEADERBOARD_DIR, { recursive: true });
-}
 
 // Load leaderboards from files
 function loadLeaderboard(filePath) {
@@ -69,15 +64,24 @@ function loadLeaderboard(filePath) {
 // Save leaderboard to file
 function saveLeaderboard(filePath, leaderboard) {
     try {
+        // Create data directory if it doesn't exist (only when actually saving)
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
         fs.writeFileSync(filePath, JSON.stringify(leaderboard, null, 2), 'utf8');
     } catch (error) {
         console.error(`Error saving leaderboard to ${filePath}:`, error);
     }
 }
 
-// Load initial leaderboards
-let leaderboardLocal = loadLeaderboard(LEADERBOARD_LOCAL_FILE);
-let leaderboardProd = loadLeaderboard(LEADERBOARD_PROD_FILE);
+// Load initial leaderboards (only if not using database)
+let leaderboardLocal = [];
+let leaderboardProd = [];
+if (!useDB) {
+    leaderboardLocal = loadLeaderboard(LEADERBOARD_LOCAL_FILE);
+    leaderboardProd = loadLeaderboard(LEADERBOARD_PROD_FILE);
+}
 
 // Helper to determine if request is from localhost
 function isLocalhost(req) {
