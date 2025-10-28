@@ -1,11 +1,11 @@
 // Maxime's Birthday Game - Refactored version
 import { gameConfig } from './config.js';
-import { GameEngine } from '../engine/GameEngine.js';
-import { PixelArtRenderer } from '../engine/PixelArtRenderer.js';
-import { InputManager } from '../engine/InputManager.js';
-import { ScoreManager } from '../engine/ScoreManager.js';
-import { UIRenderer } from '../engine/UIRenderer.js';
-import { ParisianStreetBackground } from '../backgrounds/ParisianStreet.js';
+import { GameEngine } from '/engine/GameEngine.js';
+import { PixelArtRenderer } from '/engine/PixelArtRenderer.js';
+import { InputManager } from '/engine/InputManager.js';
+import { ScoreManager } from '/engine/ScoreManager.js';
+import { UIRenderer } from '/engine/UIRenderer.js';
+import { ParisianStreetBackground } from '/backgrounds/ParisianStreet.js';
 
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');

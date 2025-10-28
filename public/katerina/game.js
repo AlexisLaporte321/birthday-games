@@ -1,11 +1,11 @@
 // Katerina's Birthday Game
 import { gameConfig } from './config.js';
-import { GameEngine } from '../engine/GameEngine.js';
-import { PixelArtRenderer } from '../engine/PixelArtRenderer.js';
-import { InputManager } from '../engine/InputManager.js';
-import { ScoreManager } from '../engine/ScoreManager.js';
-import { UIRenderer } from '../engine/UIRenderer.js';
-import { AthensStreetBackground } from '../backgrounds/AthensStreet.js';
+import { GameEngine } from '/engine/GameEngine.js';
+import { PixelArtRenderer } from '/engine/PixelArtRenderer.js';
+import { InputManager } from '/engine/InputManager.js';
+import { ScoreManager } from '/engine/ScoreManager.js';
+import { UIRenderer } from '/engine/UIRenderer.js';
+import { AthensStreetBackground } from '/backgrounds/AthensStreet.js';
 
 // Canvas setup
 const canvas = document.getElementById('gameCanvas');
