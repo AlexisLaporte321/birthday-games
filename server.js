@@ -78,6 +78,11 @@ app.get('/maxime', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'maxime', 'index.html'));
 });
 
+// Route pour le jeu de Katerina
+app.get('/katerina', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'katerina', 'index.html'));
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

@@ -1,0 +1,106 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: #f7f7f7;
+    font-family: 'Courier New', monospace;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+#gameCanvas {
+    display: block;
+    background: linear-gradient(to bottom, #87ceeb 0%, #f0e68c 100%);
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    touch-action: none;
+}
+
+#instructions {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    color: #333;
+    text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+    pointer-events: none;
+}
+
+#instructions h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    animation: bounce 1s infinite;
+}
+
+#instructions p {
+    font-size: 1.2em;
+    margin: 5px 0;
+}
+
+#instructions .small {
+    font-size: 1em;
+    margin-top: 15px;
+}
+
+#scoreDisplay {
+    font-weight: bold;
+    font-size: 1.5em;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* Rotate message for portrait mode */
+#rotateMessage {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+}
+
+.rotate-content {
+    text-align: center;
+    color: white;
+}
+
+.phone-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: rotate 2s ease-in-out infinite;
+}
+
+.rotate-content p {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+@keyframes rotate {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+}
+
+/* Show rotate message in portrait mode */
+@media (orientation: portrait) {
+    #rotateMessage {
+        display: flex;
+    }
+
+    #gameCanvas,
+    #instructions {
+        display: none;
+    }
+}
